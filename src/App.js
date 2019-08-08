@@ -6,7 +6,7 @@ import { utils } from "ynab";
 // var util = require('util');
 //Add your API access token between the quotation marks
 const accessToken =
-  "";
+  "0ac5doo0e19930544fab97a568a6f4bda90bed5c02a8e1bd3c712c88814377aa4f";
 const ynabAPI = new ynab.API(accessToken);
 
 class App extends React.Component {
