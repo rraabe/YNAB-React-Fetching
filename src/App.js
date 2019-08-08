@@ -1,12 +1,34 @@
 import React from "react";
-import logo, { ReactComponent } from "./logo.svg";
 import "./App.css";
+import config from "./config.json";
 import * as ynab from "ynab";
 import { utils } from "ynab";
 // var util = require('util');
 //Add your API access token between the quotation marks
-const accessToken =
-  "0ac5doo0e19930544fab97a568a6f4bda90bed5c02a8e1bd3c712c88814377aa4f";
+
+function findYNABToken() {
+  let token = null;
+  const search = window.location.hash
+    .substring(1)
+    .replace(/&/g, '","')
+    .replace(/=/g, '":"');
+  if (search && search !== "") {
+    // Try to get access_token from the hash returned by OAuth
+    const params = JSON.parse('{"' + search + '"}', function(key, value) {
+      return key === "" ? value : decodeURIComponent(value);
+    });
+    token = params.access_token;
+    sessionStorage.setItem("ynab_access_token", token);
+    window.location.hash = "";
+  } else {
+    // Otherwise try sessionStorage
+    token = sessionStorage.getItem("ynab_access_token");
+  }
+  return token
+}
+
+const accessToken =findYNABToken();
+console.log(accessToken)
 const ynabAPI = new ynab.API(accessToken);
 
 class App extends React.Component {
@@ -16,14 +38,26 @@ class App extends React.Component {
       date: new Date(),
       budget: "",
       categoryInput: "",
-      budgetId: "",
+       budgetId: "",
       allCategories: '',
-      balance: ''
+      balance: '',
+      ynab: {
+        clientId: config.clientId,
+        redirectUri: config.redirectUri,
+        token: null,
+        api: null
+      },
+      loading: false,
+      error: null,
+      //budgetId: null,
+      budgets: [],
+      transactions: []
     };
     this.onChange = this.onChange.bind(this);
     this.budgetID = this.budgetID.bind(this);
     this.getAllCategories = this.getAllCategories.bind(this);
   }
+
   async budget() {
     const budgetsResponse = await ynabAPI.budgets.getBudgets();
     console.log("The budgetsResponse is: ", budgetsResponse);
@@ -70,6 +104,8 @@ class App extends React.Component {
     console.log("oneCategories is: ", oneCategory);
   }
 
+  
+
   onChange(event) {
     // console.log('The event.target.value is: ', event.target.value)
     this.setState({
@@ -96,6 +132,15 @@ class App extends React.Component {
     }
   
 
+  }
+   // This builds a URI to get an access token from YNAB
+  // https://api.youneedabudget.com/#outh-applications
+  authorizeWithYNAB(e) {
+    // e.preventDefault();
+    const uri = `https://app.youneedabudget.com/oauth/authorize?client_id=${
+      this.state.ynab.clientId
+    }&redirect_uri=${this.state.ynab.redirectUri}&response_type=token`;
+    window.location.replace(uri);
   }
 
   //Add a form input field that saves to state
@@ -125,6 +170,13 @@ class App extends React.Component {
         <br/>
         <button onClick={()=>this.findCategory()}>Balance of Input</button>
         <p>${utils.convertMilliUnitsToCurrencyAmount(this.state.balance).toFixed(2)}</p>
+        <hr/>
+        <button
+          onClick={() => this.authorizeWithYNAB()}
+          class="btn btn-primary"
+        >
+          Authorize This App With YNAB &gt;
+        </button>
       </div>
     );
   }
