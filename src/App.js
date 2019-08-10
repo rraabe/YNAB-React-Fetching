@@ -3,6 +3,7 @@ import "./App.css";
 import config from "./config.json";
 import * as ynab from "ynab";
 import { utils } from "ynab";
+import { https } from "https";
 // var util = require('util');
 //Add your API access token between the quotation marks
 
@@ -24,11 +25,11 @@ function findYNABToken() {
     // Otherwise try sessionStorage
     token = sessionStorage.getItem("ynab_access_token");
   }
-  return token
+  return token;
 }
 
-const accessToken =findYNABToken();
-console.log(accessToken)
+const accessToken = findYNABToken();
+console.log(accessToken);
 const ynabAPI = new ynab.API(accessToken);
 
 class App extends React.Component {
@@ -38,9 +39,9 @@ class App extends React.Component {
       date: new Date(),
       budget: "",
       categoryInput: "",
-       budgetId: "",
-      allCategories: '',
-      balance: '',
+      budgetId: "",
+      allCategories: "",
+      balance: "",
       ynab: {
         clientId: config.clientId,
         redirectUri: config.redirectUri,
@@ -71,6 +72,7 @@ class App extends React.Component {
       budgetId: budgetId
     });
   }
+
   async budgetbyID() {
     const budgetsResponse = await ynabAPI.budgets.getBudgets();
     const budgetId = budgetsResponse.data.budgets[0].id;
@@ -104,8 +106,6 @@ class App extends React.Component {
     console.log("oneCategories is: ", oneCategory);
   }
 
-  
-
   onChange(event) {
     // console.log('The event.target.value is: ', event.target.value)
     this.setState({
@@ -119,21 +119,25 @@ class App extends React.Component {
     const budgetsResponse = await ynabAPI.budgets.getBudgets();
     const budgetId = budgetsResponse.data.budgets[0].id;
     const allCategories = await ynabAPI.categories.getCategories(budgetId);
-    console.log('State: ', this.state.categoryInput);
+    console.log("State: ", this.state.categoryInput);
 
     for (let categoryGroup of allCategories.data.category_groups) {
-      if(categoryGroup.categories.find(category => category.name === this.state.categoryInput)) {
-        let yourCategory = categoryGroup.categories.find(category => category.name === this.state.categoryInput)
-        console.log('yourCategory balance is: ', yourCategory.balance);
+      if (
+        categoryGroup.categories.find(
+          category => category.name === this.state.categoryInput
+        )
+      ) {
+        let yourCategory = categoryGroup.categories.find(
+          category => category.name === this.state.categoryInput
+        );
+        console.log("yourCategory balance is: ", yourCategory.balance);
         this.setState({
           balance: yourCategory.balance
-        })
+        });
       }
     }
-  
-
   }
-   // This builds a URI to get an access token from YNAB
+  // This builds a URI to get an access token from YNAB
   // https://api.youneedabudget.com/#outh-applications
   authorizeWithYNAB(e) {
     // e.preventDefault();
@@ -142,6 +146,31 @@ class App extends React.Component {
     }&redirect_uri=${this.state.ynab.redirectUri}&response_type=token`;
     window.location.replace(uri);
   }
+
+  async budgetMonth() {
+    const budgetMonthRequest = ynabAPI.months.getBudgetMonth(
+      "default",
+      "current"
+    );
+    budgetMonthRequest.then(r => {
+      const categories = r.data.month.categories;
+      const balances = categories.map(c => {
+        return {
+          name: c.name,
+          // we need to convert the milliunits balance to a currency amount first
+          balance: ynab.utils
+            .convertMilliUnitsToCurrencyAmount(c.balance, 2)
+            .toFixed(2),
+          budgeted: ynab.utils
+            .convertMilliUnitsToCurrencyAmount(c.budgeted, 2)
+            .toFixed(2)
+        };
+      });
+      console.log(balances);
+    });
+  }
+
+  
 
   //Add a form input field that saves to state
   //Click a button that grabs all the categories then finds the category typed into the field
@@ -156,24 +185,32 @@ class App extends React.Component {
         <button onClick={this.getAllCategories}>allCategories</button>
         <button onClick={this.getOneCategories}>oneCategories</button>
         <button onClick={this.budgetID}>BudgetId</button>
-        <br/>
-        <span>Hey Google, what's my <form>
-          <input
-            type="text"
-            name="category"
-            value={this.state.category}
-            onChange={this.onChange}
-          />
-        </form>
-        budget?
+        <button onClick={this.budgetMonth}>budgetMonth</button>
+        <br />
+        <span>
+          Hey Google, what's my{" "}
+          <form>
+            <input
+              type="text"
+              name="category"
+              value={this.state.category}
+              onChange={this.onChange}
+            />
+          </form>
+          budget?
         </span>
-        <br/>
-        <button onClick={()=>this.findCategory()}>Balance of Input</button>
-        <p>${utils.convertMilliUnitsToCurrencyAmount(this.state.balance).toFixed(2)}</p>
-        <hr/>
+        <br />
+        <button onClick={() => this.findCategory()}>Balance of Input</button>
+        <p>
+          $
+          {utils
+            .convertMilliUnitsToCurrencyAmount(this.state.balance)
+            .toFixed(2)}
+        </p>
+        <hr />
         <button
           onClick={() => this.authorizeWithYNAB()}
-          class="btn btn-primary"
+          className="btn btn-primary"
         >
           Authorize This App With YNAB &gt;
         </button>
