@@ -52,7 +52,8 @@ class App extends React.Component {
       error: null,
       //budgetId: null,
       budgets: [],
-      transactions: []
+      transactions: [],
+      accountList: ""
     };
     this.onChange = this.onChange.bind(this);
     this.budgetID = this.budgetID.bind(this);
@@ -106,6 +107,36 @@ class App extends React.Component {
     console.log("oneCategories is: ", oneCategory);
   }
 
+  async getAllAccounts() {
+    const budgetsResponse = await ynabAPI.budgets.getBudgets();
+    const budgetId = budgetsResponse.data.budgets[0].id;
+    const accountList = await ynabAPI.accounts.getAccounts(budgetId);
+    const payees = await ynabAPI.payees.getPayees(budgetId);
+    console.log("accountList is: ", accountList);
+    console.log(accountList.data.accounts[0].id);
+    console.log('Payees are: ', payees);
+  }
+
+  async createTransaction() {
+    const budgetsResponse = await ynabAPI.budgets.getBudgets();
+    const budgetId = budgetsResponse.data.budgets[0].id;
+    const accountList = await ynabAPI.accounts.getAccounts(budgetId);
+    const account_id = accountList.data.accounts[0].id;
+    const data = {
+      "transaction": {
+        "account_id": account_id,
+        "date": '2019-08-18',
+        "amount": 100,
+        "payee_name": "payee_name string",
+        "category_id": "eaf4fafe-886e-4ec4-a51a-ab63d4e9aadd",
+        "memo": "memo string",
+      
+      }  
+    };
+
+    await ynabAPI.transactions.createTransaction(budgetId, data);
+  }
+
   onChange(event) {
     // console.log('The event.target.value is: ', event.target.value)
     this.setState({
@@ -153,6 +184,7 @@ class App extends React.Component {
       "current"
     );
     budgetMonthRequest.then(r => {
+      console.log(r);
       const categories = r.data.month.categories;
       const balances = categories.map(c => {
         return {
@@ -170,8 +202,6 @@ class App extends React.Component {
     });
   }
 
-  
-
   //Add a form input field that saves to state
   //Click a button that grabs all the categories then finds the category typed into the field
   //Return the balance of that category
@@ -186,6 +216,8 @@ class App extends React.Component {
         <button onClick={this.getOneCategories}>oneCategories</button>
         <button onClick={this.budgetID}>BudgetId</button>
         <button onClick={this.budgetMonth}>budgetMonth</button>
+        <button onClick={this.getAllAccounts}>getAllAccounts</button>
+        <button onClick={this.createTransaction}>createTransaction</button>
         <br />
         <span>
           Hey Google, what's my{" "}
