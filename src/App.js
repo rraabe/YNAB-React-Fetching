@@ -195,7 +195,8 @@ class App extends React.Component {
             .toFixed(2),
           budgeted: ynab.utils
             .convertMilliUnitsToCurrencyAmount(c.budgeted, 2)
-            .toFixed(2)
+            .toFixed(2), 
+          id: c.id
         };
       });
       console.log(balances);
